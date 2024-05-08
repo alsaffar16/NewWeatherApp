@@ -1,19 +1,19 @@
 import Constants from 'expo-constants';
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore'
+import { getAuth } from 'firebase/auth'
 
 export const firebaseConfig = {
-    apiKey: Constants.expoConfig?.extra?.apiKey,
-    authDomain: Constants.expoConfig?.extra?.authDomain,
-    projectId: Constants.expoConfig?.extra?.projectId,
-    storageBucket: Constants.expoConfig?.extra?.storageBucket,
-    messagingSenderId: Constants.expoConfig?.extra?.messagingSenderId,
-    appId: Constants.expoConfig?.extra?.appId,
-    measurementId: Constants.expoConfig?.extra?.measurementId,
+    apiKey: process.env.EXPO_PUBLIC_API_KEY,
+    authDomain: process.env.EXPO_PUBLIC_AUTH_DOMAIN,
+    projectId: process.env.EXPO_PUBLIC_PROJECT_ID,
+    storageBucket: process.env.EXPO_PUBLIC_STORAGE_BUCKET,
+    messagingSenderId: process.env.EXPO_PUBLIC_MESSAGING_SENDER_ID,
+    appId: process.env.EXPO_PUBLIC_APP_ID,
+    measurementId: process.env.EXPO_PUBLIC_MEASuREMENT_ID,
 };
 
 const app = initializeApp(firebaseConfig);
 
-const db = getFirestore();
-
-export default db;
+export const db = getFirestore();
+export const auth = getAuth()

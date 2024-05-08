@@ -1,7 +1,7 @@
 export const FAVORITE = 'FAVORITE';
 export const DELETE = 'DELETE';
 export const SET_CITIES = 'SET_CITIES';
-import db from '@/constants/firebaseConfig';
+import { db } from '@/constants/firebaseConfig';
 import { collection, doc, getDocs, query, where } from 'firebase/firestore';
 import { Dispatch } from 'redux';
 
@@ -19,7 +19,6 @@ export const fetchFavotites = (uid: string) => {
                 userId: doc.data().userId,
             });
             dispatch({ type: SET_CITIES, cityID: doc.data().cityID });
-            console.log(doc.data().cityID);
         });
     };
 };

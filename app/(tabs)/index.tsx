@@ -35,8 +35,7 @@ export default function App() {
   const [weatherState, setweatherState] = useState('');
   const [backColor, setbackColor] = useState('#fff');
   const [icon, setIcon] = useState(' ');
-  const [cityID, setCityId] = useState('');
-  const [favoriteCity, setfavoriteCity] = useState([]);
+
   useEffect(() => {
     dispatch(fetchFavotites(uid));
     (async () => {
@@ -62,13 +61,11 @@ export default function App() {
     )
       .then((response) => response.json())
       .then((responseJson) => {
-        console.log(responseJson);
         settempreture(responseJson.current.temp_c);
-        setweatherState(responseJson.current.condition.text.toString());
+        setweatherState(responseJson.current.condition.text);
         backroundCol(responseJson.current.condition.text);
-        setIcon('http://api.weatherapi.com/v1' + responseJson.current.conditionicon);
+        setIcon(`https:${responseJson.current.condition.icon}`);
         setLoading(false);
-        console.log(uid);
       });
   }
 
@@ -95,7 +92,7 @@ export default function App() {
         <View style={{ flexDirection: 'column', flex: 1, }}>
           <Image
             source={{
-              uri: icon.toString(),
+              uri: icon,
             }}
             style={{
               width: Dimensions.get('window').width * 0.4,

@@ -32,7 +32,6 @@ const cityReducer = (state = intialState, action: CityAction) => {
             if (index >= 0) {
                 return state;
             } else {
-                console.log(city);
                 const newArray = state.favoriteCities.concat(city);
 
                 return { ...state, favoriteCities: newArray };
@@ -55,7 +54,6 @@ const cityReducer = (state = intialState, action: CityAction) => {
             const existingIndex = state.favoriteCities.findIndex(
                 (city) => city.geonameid === action.cityID
             );
-            console.log(existingIndex);
             if (existingIndex >= 0) {
                 const updatedCities = [...state.favoriteCities];
                 updatedCities.splice(existingIndex, 1);

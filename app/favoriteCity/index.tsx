@@ -1,90 +1,78 @@
+import { StatusBar } from 'expo-status-bar';
 import React, { useState, useEffect, useCallback } from 'react';
-import * as Location from 'expo-location';
 import { useFonts, Comfortaa_400Regular, Comfortaa_500Medium } from '@expo-google-fonts/comfortaa';
 import { StyleSheet, TouchableHighlight, Text, Image, View, Dimensions, Button } from 'react-native';
-import { useSelector, useDispatch } from 'react-redux';
-import Constants from 'expo-constants';
-import Loading from '@/components/loadingScreen';
-import { fetchFavotites } from '@/store/actions/city';
+import { useDispatch } from 'react-redux';
+import { useSelector } from 'react-redux';
+import { useNavigation } from '@react-navigation/native';
 import { ReduxState } from '@/constants/types';
-import { AppDispatch } from '@/components/Provider/AppProvider';
-import { useAppDispatch } from '@/hooks/reduxHook';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { deleteCity } from '@/store/actions/city';
+import Loading from '@/components/loadingScreen';
+import { collection, deleteDoc, getDocs, query, where } from 'firebase/firestore';
+import { db } from '@/constants/firebaseConfig';
 
-export default function App() {
+type FavoriteCityType = {
+    id: string;
+    name: string
+}
+export default function favoriteCity() {
+    const { id, name } = useLocalSearchParams<FavoriteCityType>()
+    const router = useRouter()
     const uid = useSelector((state: ReduxState) => {
         return state.userID.uid;
     });
-    const dispatch = useAppDispatch()
+    const navigation = useNavigation();
     let [fontsLoaded] = useFonts({
         Comfortaa_400Regular,
         Comfortaa_500Medium,
     });
-    const forcast = [
-        { key: '0', day: 'Sun', data: '25/5/2021', min: '25', max: '50' },
-        { key: '1', day: 'Mon', data: '25/5/2021', min: '25', max: '32' },
-        { key: '2', day: 'Tue', data: '25/5/2021', min: '25', max: '55' },
-        { key: '3', day: 'Wed', data: '25/5/2021', min: '25', max: '100' },
-    ];
     const [cState, setcState] = useState(true);
     const [fState, setfState] = useState(false);
     const [loading, setLoading] = useState(true);
-    const [location, setLocation] = useState<Location.LocationObject | null>();
-    const [errorMsg, setErrorMsg] = useState('');
+    const [cityName, setCity] = useState('');
+    const [fetching, setFetching] = useState(false);
+    const [found, setFound] = useState(false);
     const [tempreture, settempreture] = useState('');
     const [weatherState, setweatherState] = useState('');
-    const [backColor, setbackColor] = useState('#fff');
+    const [backColor, setbackColor] = useState('');
     const [icon, setIcon] = useState(' ');
-    const [cityID, setCityId] = useState('');
-    const [favoriteCity, setfavoriteCity] = useState([]);
+
+    const dispatch = useDispatch();
+
+    const dispatchHandler = useCallback(() => {
+        dispatch(deleteCity(id));
+    }, [dispatch, id]);
+
     useEffect(() => {
-        dispatch(fetchFavotites(uid));
         (async () => {
-            let { status } = await Location.requestForegroundPermissionsAsync();
-            if (status !== 'granted') {
-                setErrorMsg('Permission to access location was denied');
-                return;
-            }
-
-            let location = await Location.getCurrentPositionAsync({});
-
-            setLocation(location);
-            getWheatherData(location);
+            setCity(name);
+            getWheatherData();
         })();
     }, []);
 
-    function getWheatherData(location: Location.LocationObject) {
-        //console.log(location.coords.latitude);
-        //console.log(location.coords.longitude);
-        fetch(
-            `https://api.openweathermap.org/data/3.0/onecall?lat=${location.coords.latitude}&lon=${location.coords.longitude}&appid=${Constants.expoConfig?.extra?.WEATHER_API_KEY}`,
-
-            { method: 'GET' }
-        )
+    function getWheatherData() {
+        setFetching(true);
+        fetch(`http://api.weatherapi.com/v1/current.json?q=${name}&key=${process.env.EXPO_PUBLIC_WEATHER_API_KEY}`, {
+            method: 'GET',
+        })
             .then((response) => response.json())
             .then((responseJson) => {
-                //console.log(responseJson);
-                settempreture(responseJson.current.temp);
-                setweatherState(responseJson.current.weather[0].main.toString());
-                backroundCol(responseJson.current.weather[0].main);
-                setIcon('http://openweathermap.org/img/wn/' + responseJson.current.weather[0].icon + '@2x.png');
+                settempreture(responseJson.current.temp_c);
+                setFound(true);
+                setweatherState(responseJson.current.condition.text);
                 setLoading(false);
-                console.log(uid);
+                setIcon(`https:${responseJson.current.condition.icon}`);
+                backroundCol(responseJson.current.condition.text);
             });
     }
 
     function backroundCol(state: string) {
-        if (state == 'Clouds') setbackColor('#d0cccc');
+        if (state === 'Clouds') setbackColor('#d0cccc');
         else if (state === 'Sunny') setbackColor('#F2F27A');
         else if (state === 'Rain') setbackColor('#AFC3CC');
         else if (state === 'Snow') setbackColor('#fffafa');
         else if (state === 'Clear') setbackColor('#66bbdd');
-    }
-
-    let text = 'Waiting..';
-    if (errorMsg) {
-        text = errorMsg;
-    } else if (location) {
-        text = JSON.stringify(location);
     }
 
     return loading ? (
@@ -92,10 +80,10 @@ export default function App() {
     ) : (
         <View style={[styles.MainContainer]}>
             <View style={[styles.currentInfo, { backgroundColor: backColor }]}>
-                <View style={{ flexDirection: 'column', flex: 1, }}>
+                <View style={{ flexDirection: 'column', flex: 1 }}>
                     <Image
                         source={{
-                            uri: icon.toString(),
+                            uri: icon,
                         }}
                         style={{
                             width: Dimensions.get('window').width * 0.4,
@@ -109,8 +97,9 @@ export default function App() {
                             fontSize: 30,
                             alignContent: 'center',
                             fontFamily: 'Comfortaa_400Regular',
-                            marginLeft: Dimensions.get('window').width * 0.12,
+                            marginLeft: Dimensions.get('window').width * 0.05,
                             marginTop: Dimensions.get('window').height * 0.01,
+
                             paddingRight: 150,
                         }}
                     >
@@ -120,7 +109,7 @@ export default function App() {
 
                 <Text
                     style={{
-                        fontSize: 30,
+                        fontSize: 32,
                         fontFamily: 'Comfortaa_500Medium',
                         marginLeft: Dimensions.get('window').width * 0.3,
                         marginRight: Dimensions.get('window').width * 0.1,
@@ -166,18 +155,39 @@ export default function App() {
                     <Text style={styles.buttonText}>°F</Text>
                 </TouchableHighlight>
             </View>
-
             <View
                 style={{
-                    marginTop: Dimensions.get('window').height * 0.3,
+                    marginTop: Dimensions.get('window').height * 0.25,
                 }}
-            ></View>
+            >
+                <TouchableHighlight
+                    style={{
+                        borderRadius: 15,
+                        backgroundColor: '#ff3232',
+                        paddingHorizontal: 30,
+
+                        justifyContent: 'center',
+                        //alignContent: "center",
+                    }}
+                    onPress={async () => {
+                        const _query = query(collection(db, 'favoriteCities'), where('userID', '==', uid), where('cityID', '==', id))
+                        const snap = await getDocs(_query)
+                        snap.forEach((doc) => {
+                            deleteDoc(doc.ref)
+                        });
+                        dispatchHandler();
+                        router.back()
+                        alert('City Deleted from Favorite');
+                    }}
+                >
+                    <Text style={[styles.buttonText, { marginTop: 10 }]}>Delete from favorite </Text>
+                </TouchableHighlight>
+            </View>
         </View>
     );
 }
 const styles = StyleSheet.create({
     MainContainer: {
-        marginTop: Dimensions.get('window').height * 0.1,
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
@@ -185,10 +195,11 @@ const styles = StyleSheet.create({
 
     currentInfo: {
         flexDirection: 'row',
+        marginHorizontal: Dimensions.get('window').width * 0.02,
         justifyContent: 'center',
         alignContent: 'center',
-        paddingBottom: Dimensions.get('window').width * 0.04,
-        marginHorizontal: Dimensions.get('window').width * 0.02,
+        paddingBottom: 30,
+        marginTop: Dimensions.get('window').width * 0.1,
         fontFamily: 'Comfortaa_400Regular',
         borderRadius: 20,
     },
